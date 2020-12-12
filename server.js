@@ -5,17 +5,14 @@ const webpackDevMiddleware = require('webpack-dev-middleware');
 const webpackHotMiddleware = require('webpack-hot-middleware');
 const path = require('path');
 
-const webpackConfig = require('./webpack.config.js');
+const webpackConfig = require('./webpack.dev.js');
 const { NODE_ENV } = process.env;
 
 const app = express();
-let config = require('./webpack.common.js');
-if(NODE_ENV === 'development')
-{
-    config = require('./webpack.dev');
-}
-else
-    config = require('./webpack.prod');
+let config = require('./webpack.dev.js');
+if (NODE_ENV === 'development') {
+  config = require('./webpack.dev');
+} else config = require('./webpack.prod');
 
 const compiler = webpack(config);
 const middleware = webpackDevMiddleware(compiler, webpackConfig.output.publicPath);

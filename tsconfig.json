@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "outDir": "./build/",
     "allowJs": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
@@ -7,7 +8,12 @@
     "noUnusedParameters": true,
     "noUnusedLocals": true,
     "target": "es5",
-    "jsx": "react"
+    "jsx": "react",
+    "sourceMap": true,
   },
-  "include": ["./**/*.ts", "./**/*.tsx", "./**/*.json"]
+  "include": [
+    "./**/*.ts",
+    "./**/*.tsx",
+    "./**/*.json", "index.js", "src/index.js"
+  ]
 }

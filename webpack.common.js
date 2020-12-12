@@ -1,73 +1,132 @@
-const webpack = require('webpack');
+/**
+ * COMMON WEBPACK CONFIGURATION
+ */
+
 const path = require('path');
-const markdownRenderer = require('react-markdown-reader').renderer;
-const HtmlWebpackPlugin = require('html-webpack-plugin');
-const CircularDependencyPlugin = require('circular-dependency-plugin');
+const webpack = require('webpack');
 
-
-module.exports = {
-  entry: {
-    app: './src/index.tsx',
-  },
-  resolve: {
-    extensions: ['.ts', '.tsx', '.js', '.json']
-  },
-  plugins: [
-    // new CleanWebpackPlugin(['dist/*']) for < v2 versions of CleanWebpackPlugin
-    new HtmlWebpackPlugin({
-        title: 'Handy Table',
-        filename: 'index.html',
-        template: 'index.html',
-        inject: true,
-        hash: true,
-    }),
-    new webpack.HotModuleReplacementPlugin(), // Tell webpack we want hot reloading
-    new CircularDependencyPlugin({
-        exclude: /a\.js|node_modules/, // exclude node_modules
-        failOnError: false, // show a warning when there is a circular dependency
-      }),
-  ],
+module.exports = options => ({
+  mode: options.mode,
+  entry: options.entry,
+  output: Object.assign(
+    {
+      // Compile into js/build.js
+      path: path.resolve(process.cwd(), 'build'),
+      publicPath: '/'
+    },
+    options.output
+  ), // Merge with env dependent settings
+  optimization: options.optimization,
   module: {
-      rules:[
-        {
-            test: /\.tsx?$/,
-            use: ['babel-loader'],
-            exclude: /node_modules/
+    rules: [
+      {
+        test: /\.(jsx | js | tsx | ts)?$/, // Transform all .js and .jsx files required somewhere with Babel
+        exclude: /node_modules/,
+        use: {
+          loader: 'babel-loader',
+          options: {
+            presets: ['"@babel/preset-env', '@babel/preset-typescript', '@babel/preset-react']
+          }
+        }
+      },
+      {
+        test: /\.(tsx | ts)?$/,
+        use: 'ts-loader',
+        exclude: /node_modules/
+      },
+      {
+        // Preprocess our own .css files
+        // This is the place to add your own loaders (e.g. sass/less etc.)
+        // for a list of loaders, see https://webpack.js.org/loaders/#styling
+        test: /\.(less|css)$/,
+        exclude: /node_modules/,
+        use: ['style-loader', 'css-loader', 'less-loader?javascriptEnabled=true']
+      },
+      {
+        // Preprocess 3rd party .css files located in node_modules
+        test: /\.css$/,
+        include: /node_modules/,
+        use: ['style-loader', 'css-loader']
+      },
+      {
+        test: /\.(eot|otf|ttf|woff|woff2|json)$/,
+        use: 'file-loader'
+      },
+      {
+        test: /\.svg$/,
+        use: [
+          {
+            loader: 'svg-url-loader',
+            options: {
+              // Inline files smaller than 10 kB
+              limit: 10 * 1024,
+              noquotes: true
+            }
+          }
+        ]
+      },
+      {
+        test: /\.(jpg|png|gif)$/,
+        use: [
+          {
+            loader: 'url-loader',
+            options: {
+              // Inline files smaller than 10 kB
+              limit: 10 * 1024
+            }
           },
           {
-            test: /\.(less|css)$/,
-            use: [
-              'css-loader',
-              'less-loader?javascriptEnabled=true'
-            ]
-          },
-          {
-            test: /\.md$/,
-            use: [
-              {
-                loader: 'html-loader'
+            loader: 'image-webpack-loader',
+            options: {
+              mozjpeg: {
+                enabled: false
+                // NOTE: mozjpeg is disabled as it causes errors in some Linux environments
+                // Try enabling it in your environment by switching the config to:
+                // enabled: true,
+                // progressive: true,
               },
-              {
-                loader: 'markdown-loader',
-                options: {
-                  pedantic: true,
-                  renderer: markdownRenderer()
-                }
+              gifsicle: {
+                interlaced: false
+              },
+              optipng: {
+                optimizationLevel: 7
+              },
+              pngquant: {
+                quality: '65-90',
+                speed: 4
               }
-            ]
-          },
-          {
-            test: /\.(woff|woff2|eot|ttf|svg)($|\?)/,
-            use: [
-              {
-                loader: 'url-loader?limit=1&hash=sha512&digest=hex&size=16&name=resources/[hash].[ext]'
-              }
-            ]
-          },
-      ]
+            }
+          }
+        ]
+      },
+      {
+        test: /\.html$/,
+        use: 'html-loader'
+      },
+      {
+        test: /\.(mp4|webm)$/,
+        use: {
+          loader: 'url-loader',
+          options: {
+            limit: 10000
+          }
+        }
+      }
+    ]
   },
-  output: {
-    filename: '[name].bundle.js',
-    path: path.resolve(__dirname, 'dist'),
+  plugins: options.plugins.concat([
+    // Always expose NODE_ENV to webpack, in order to use `process.env.NODE_ENV`
+    // inside your code for any environment checks; Terser will automatically
+    // drop any unreachable code.
+    new webpack.EnvironmentPlugin({
+      NODE_ENV: 'development'
+    })
+  ]),
+  resolve: {
+    modules: ['node_modules', 'src'],
+    extensions: ['.js', '.jsx', '.react.js', '.tsx', '.ts']
   },
-};
+  devtool: options.devtool,
+  target: 'web', // Make web variables accessible to webpack, e.g. window
+  performance: options.performance || {}
+});
